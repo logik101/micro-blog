@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
   return {
-    base: '/micro-blog/',
+    base: './',
     plugins: [react()],
     server: {
       port: 3000,
