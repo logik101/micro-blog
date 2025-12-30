@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Language } from '../types';
 import { TRANSLATIONS } from '../constants';
+import Logo from './Logo';
 
 interface AuthProps {
   onLogin: (username: string) => void;
@@ -28,7 +29,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, language }) => {
       if (cleanUsername === 'admin' && cleanPassword === 'admin') {
         onLogin(username.trim());
       } else {
-        setError(language === 'fr' ? 'Identifiants invalides.' : (language === 'ht' ? 'Idantifyan yo pa bon.' : 'Invalid credentials.'));
+        setError(language === 'fr' ? 'Identifiants invalides.' : 'Invalid credentials.');
         setIsLoading(false);
       }
     }, 400);
@@ -38,8 +39,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, language }) => {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50 font-sans selection:bg-[#1a3a8a] selection:text-white">
       <div className="max-w-md w-full bg-white p-8 md:p-12 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 transition-all duration-300 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-[#1a3a8a] rounded-3xl mb-6 shadow-[0_10px_20px_rgba(26,58,138,0.2)] transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-             <span className="text-white font-black text-3xl">M</span>
+          <div className="flex justify-center mb-6">
+            <Logo size="lg" className="transform -rotate-3 hover:rotate-0 transition-transform duration-300" />
           </div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">{t.adminPortal}</h2>
           <p className="text-gray-400 mt-2 font-medium">{t.adminSubtitle}</p>

@@ -2,57 +2,63 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { BlogPost, Language } from "../types";
 
+/**
+ * GeminiService is now used only for the Admin Dashboard to help 
+ * content creators generate posts. It is not used by readers,
+ * ensuring zero API costs for normal blog traffic.
+ */
 export class GeminiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
-  async generateBlogPost(topic: string) {
+  /**
+   * Generates a complete blog post structure from a given topic using Gemini.
+   */
+  async generateBlogPost(topic: string): Promise<Partial<BlogPost>> {
     try {
       const response = await this.ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Create a professional blog post about "${topic}" in the context of microfinance and technology.`,
+        model: 'gemini-3-pro-preview',
+        contents: `Write a compelling and professional blog post about: ${topic}. 
+        Return ONLY a JSON object with the following fields: 
+        title, excerpt, description, and content (Markdown).`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
               title: { type: Type.STRING },
-              category: { type: Type.STRING },
               excerpt: { type: Type.STRING },
+              description: { type: Type.STRING },
               content: { type: Type.STRING },
-              readingTime: { type: Type.STRING },
             },
-            required: ["title", "category", "excerpt", "content", "readingTime"],
+            required: ["title", "excerpt", "description", "content"],
           },
         },
       });
 
-      return JSON.parse(response.text);
+      const jsonStr = response.text || "{}";
+      return JSON.parse(jsonStr.trim());
     } catch (error) {
-      console.error("AI Generation failed:", error);
+      console.error("AI blog generation failed:", error);
       throw error;
     }
   }
 
-  async translateBlogPost(post: { title: string; excerpt: string; content: string }, targetLang: Language) {
-    const langNames = {
-      en: 'English',
-      fr: 'French',
-      ht: 'Haitian Creole'
-    };
-
+  /**
+   * Translates a blog post's metadata and content into a target language.
+   */
+  async translateBlogPost(post: { title: string, excerpt?: string, content: string }, targetLang: Language): Promise<any> {
     try {
       const response = await this.ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Translate the following blog post content into ${langNames[targetLang]}. 
-        Maintain the professional tone and ensure the meaning is preserved perfectly.
-        
+        contents: `Translate the following blog post content to ${targetLang}:
         Title: ${post.title}
-        Excerpt: ${post.excerpt}
-        Content: ${post.content}`,
+        Excerpt: ${post.excerpt || ''}
+        Content: ${post.content}
+        Return ONLY a JSON object with the following fields: title, excerpt, content.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -67,9 +73,10 @@ export class GeminiService {
         },
       });
 
-      return JSON.parse(response.text);
+      const jsonStr = response.text || "{}";
+      return JSON.parse(jsonStr.trim());
     } catch (error) {
-      console.error(`Translation to ${targetLang} failed:`, error);
+      console.error("AI translation failed:", error);
       throw error;
     }
   }

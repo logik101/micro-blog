@@ -1,27 +1,27 @@
 
 export interface BlogPost {
   id: string;
-  title: string;
-  category: string;
-  excerpt: string;
-  content: string;
-  imageUrl: string;
-  date: string;
-  readingTime: string;
   author: string;
-  isPublished: boolean;
-  translations?: Partial<Record<Language, {
-    title: string;
-    excerpt: string;
-    content: string;
-  }>>;
+  publicationDate: string;
+  readTimeMinutes: number;
+  imageUrl: string;
+  // Support for both dynamic and fixed language fields
+  title: string;
+  description: string;
+  content: string;
+  excerpt?: string;
+  category?: string;
+  isPublished?: boolean;
+  translations?: Record<string, any>;
+  // Language specific overrides
+  title_en?: string;
+  title_fr?: string;
+  description_en?: string;
+  description_fr?: string;
+  content_en?: string;
+  content_fr?: string;
 }
 
-export type ViewState = 'home' | 'login' | 'dashboard' | 'editor' | 'article';
+export type ViewState = 'home' | 'article';
 
-export type Language = 'en' | 'fr' | 'ht';
-
-export interface User {
-  isLoggedIn: boolean;
-  username: string | null;
-}
+export type Language = 'en' | 'fr';

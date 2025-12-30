@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { BlogPost, Language } from '../types';
 import { gemini } from '../services/geminiService';
-import { TRANSLATIONS } from '../constants';
+import { TRANSLATIONS, getPostImage } from '../constants';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface DashboardProps {
@@ -22,38 +22,42 @@ const Dashboard: React.FC<DashboardProps> = ({ posts, language, onAdd, onDelete,
   const [topic, setTopic] = useState('');
   const t = TRANSLATIONS[language];
 
+  // Logic to handle AI blog post generation
   const handleGenerateAI = async () => {
     if (!topic) return;
     setIsGenerating(true);
     try {
       const generated = await gemini.generateBlogPost(topic);
       const newPost: BlogPost = {
-        ...generated,
+        title: generated.title || '',
+        description: generated.description || '',
+        content: generated.content || '',
+        excerpt: generated.excerpt || '',
         id: Date.now().toString(),
-        imageUrl: `https://picsum.photos/seed/${Math.random()}/800/600`,
-        date: new Date().toLocaleDateString(),
+        imageUrl: "", // Intentionally empty to test fallback
+        publicationDate: new Date().toLocaleDateString(),
         author: 'Admin',
+        readTimeMinutes: 5,
         isPublished: true,
         translations: {}
       };
       onAdd(newPost);
       setTopic('');
-    } catch (e) {
+    } catch (error) {
       alert("AI generation failed. Please check your API key.");
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Logic to handle automated translation of blog posts
   const handleAutoTranslate = async (post: BlogPost) => {
     setTranslatingId(post.id);
     try {
-      const targetLangs: Language[] = ['en', 'fr', 'ht'];
+      const targetLangs: Language[] = ['en', 'fr'];
       const newTranslations = { ...(post.translations || {}) };
 
       for (const lang of targetLangs) {
-        // Skip translating if already present or if it's the current content language 
-        // (Assuming current content is 'fr' for now based on default, but can be smarter)
         if (!newTranslations[lang]) {
           const result = await gemini.translateBlogPost(
             { title: post.title, excerpt: post.excerpt, content: post.content },
@@ -91,12 +95,13 @@ const Dashboard: React.FC<DashboardProps> = ({ posts, language, onAdd, onDelete,
               category: '',
               excerpt: '',
               content: '',
-              imageUrl: 'https://picsum.photos/800/600',
-              date: new Date().toLocaleDateString(),
-              readingTime: `5 min ${t.readTime}`,
+              imageUrl: '',
+              publicationDate: new Date().toLocaleDateString(),
+              readTimeMinutes: 5,
               author: 'Admin',
               isPublished: true,
-              translations: {}
+              translations: {},
+              description: ''
             })}
             className="bg-[#1a3a8a] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#152e6d] transition-all shadow-lg active:scale-95"
           >
@@ -137,7 +142,7 @@ const Dashboard: React.FC<DashboardProps> = ({ posts, language, onAdd, onDelete,
                       <td className="px-4 py-5 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-12 w-12 rounded-xl overflow-hidden mr-4 border border-gray-100 shrink-0">
-                            <img src={post.imageUrl} className="h-full w-full object-cover" />
+                            <img src={getPostImage(post)} className="h-full w-full object-cover" />
                           </div>
                           <div className="text-sm font-bold text-gray-900 truncate max-w-[150px]">{post.title}</div>
                         </div>
@@ -146,7 +151,6 @@ const Dashboard: React.FC<DashboardProps> = ({ posts, language, onAdd, onDelete,
                         <div className="flex space-x-1">
                           <span title="English" className={`text-sm grayscale transition-all ${post.translations?.en || language === 'en' ? 'grayscale-0' : 'opacity-20'}`}>🇺🇸</span>
                           <span title="French" className={`text-sm grayscale transition-all ${post.translations?.fr || language === 'fr' ? 'grayscale-0' : 'opacity-20'}`}>🇫🇷</span>
-                          <span title="Haitian Creole" className={`text-sm grayscale transition-all ${post.translations?.ht || language === 'ht' ? 'grayscale-0' : 'opacity-20'}`}>🇭🇹</span>
                         </div>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
