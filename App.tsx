@@ -8,7 +8,7 @@ import Logo from './components/Logo';
 import { marked } from 'marked';
 
 // Using the raw content URL to ensure fetch works correctly with JSON data
-const GITHUB_RAW_URL = "https://raw.githubusercontent.com/logik101/micro-blog/main/post.md";
+const GITHUB_RAW_URL = "https://raw.githubusercontent.com/logik101/micro-blog/main/public/post.md";
 
 const HighlightText: React.FC<{ text: string; query: string }> = ({ text, query }) => {
   if (!query.trim()) return <>{text}</>;
