@@ -67,7 +67,7 @@ This is the blog content rendered by the app.
   "content": "## La technologie comme facilitateur\n\nLes outils digitaux permettent aux institutions financières de réduire les coûts, d’élargir leur portée et d’améliorer la qualité des services. L’automatisation, les plateformes mobiles et l’intelligence artificielle font désormais partie du quotidien.\n\n## Les risques à maîtriser\n\nL’innovation comporte également des défis importants :\n\n- la protection des données et la cybersécurité\n- l’exclusion numérique de certaines populations\n- une dépendance excessive aux décisions automatisées\n\nUne innovation responsable repose sur un équilibre entre technologie, supervision humaine et principes éthiques clairs.\n\n## Une approche équilibrée\n\nL’avenir des services financiers dépend de cet équilibre. Les institutions qui réussiront seront celles qui utiliseront la technologie pour renforcer la confiance, la transparence et l’inclusion.\n"
 },
 {
-  "id": "microforms-pioneer-microfinance-research",
+  "id": "microforms-pio-research",
   "title": "MicroFormS : Pionnier de la recherche en microfinance et des technologies innovantes",
   "publicationDate": "2025-04-03",
   "readTimeMinutes": 1,
