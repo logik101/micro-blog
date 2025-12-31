@@ -32,17 +32,17 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ currentLanguage, on
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all text-sm font-bold text-gray-700"
+        className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full border border-gray-200 hover:border-gray-300 bg-white/50 text-xs sm:text-sm font-bold text-gray-700 transition-all"
       >
         <span>{selectedLang?.flag}</span>
-        <span className="hidden sm:inline">{selectedLang?.label}</span>
-        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        <span className="hidden xs:inline">{selectedLang?.label}</span>
+        <svg className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-2 w-32 sm:w-40 bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
           {languages.map((lang) => (
             <button
               key={lang.code}
@@ -50,7 +50,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ currentLanguage, on
                 onLanguageChange(lang.code);
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-4 py-3 text-left text-sm font-semibold hover:bg-gray-50 transition-colors ${
+              className={`w-full flex items-center space-x-2 sm:space-x-3 px-3 py-2.5 sm:px-4 sm:py-3 text-left text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors ${
                 currentLanguage === lang.code ? 'text-[#1a3a8a] bg-blue-50/50' : 'text-gray-600'
               }`}
             >
