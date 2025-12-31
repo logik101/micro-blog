@@ -9,7 +9,7 @@ This is the blog content rendered by the app.
    {
       "id": "ai-revolutionizing-microfinance",
       "title": "How Artificial Intelligence is Revolutionizing Microfinance",
-      "publicationDate": "2025-12-25",
+      "publicationDate": "2025-11-25",
       "readTimeMinutes": 7,
       "author": "Admin",
       "imageUrl": "",
