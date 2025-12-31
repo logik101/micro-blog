@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BlogPost, Language } from '../types';
 import { Icons, TRANSLATIONS, getPostImage } from '../constants';
@@ -37,15 +36,72 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, language, onClick, onShowToas
 
   const handleShare = async (platform: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
     if (platform === 'native' && navigator.share) {
       try {
-        await navigator.share({ title: post.title, url: shareUrl });
+        await navigator.share({ 
+          title: post.title, 
+          text: post.description,
+          url: shareUrl 
+        });
         return;
       } catch (err) {}
     }
-    await navigator.clipboard.writeText(shareUrl);
-    if (onShowToast) onShowToast(language === 'fr' ? 'Lien copié !' : 'Link copied!');
+
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedTitle = encodeURIComponent(post.title);
+    const encodedText = encodeURIComponent(`${post.title} - ${post.description}`);
+    
+    let url = '';
+    switch (platform) {
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        break;
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`;
+        break;
+      case 'whatsapp':
+        const waUrl = `whatsapp://send?text=${encodedText}%20${encodedUrl}`;
+        const waWebUrl = `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
+        window.location.href = waUrl;
+        setTimeout(() => {
+          if (document.hasFocus()) window.open(waWebUrl, '_blank');
+        }, 500);
+        return;
+      case 'linkedin':
+        url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+        break;
+      case 'instagram':
+        await navigator.clipboard.writeText(shareUrl);
+        if (onShowToast) onShowToast(language === 'fr' ? 'Lien copié ! Ouverture d\'Instagram...' : 'Link copied! Opening Instagram...');
+        window.location.href = 'instagram://';
+        return;
+      case 'tiktok':
+        await navigator.clipboard.writeText(shareUrl);
+        if (onShowToast) onShowToast(language === 'fr' ? 'Lien copié ! Ouverture de TikTok...' : 'Link copied! Opening TikTok...');
+        window.location.href = 'snssdk1128://'; 
+        return;
+      case 'copy':
+      default:
+        await navigator.clipboard.writeText(shareUrl);
+        if (onShowToast) onShowToast(language === 'fr' ? 'Lien copié !' : 'Link copied!');
+        return;
+    }
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
+
+  const platforms = [
+    { id: 'facebook', icon: <Icons.Facebook />, hoverColor: 'hover:text-[#1877F2]', bgColor: 'hover:bg-[#1877F2]/10' },
+    { id: 'twitter', icon: <Icons.Twitter />, hoverColor: 'hover:text-black', bgColor: 'hover:bg-black/10' },
+    { id: 'linkedin', icon: <Icons.LinkedIn />, hoverColor: 'hover:text-[#0A66C2]', bgColor: 'hover:bg-[#0A66C2]/10' },
+    { id: 'whatsapp', icon: <Icons.WhatsApp />, hoverColor: 'hover:text-[#25D366]', bgColor: 'hover:bg-[#25D366]/10' },
+    { id: 'instagram', icon: <Icons.Instagram />, hoverColor: 'hover:text-[#E4405F]', bgColor: 'hover:bg-[#E4405F]/10' },
+    { id: 'tiktok', icon: <Icons.TikTok />, hoverColor: 'hover:text-black', bgColor: 'hover:bg-black/10' },
+    { id: 'copy', icon: <Icons.Link />, hoverColor: 'hover:text-[#1a3a8a]', bgColor: 'hover:bg-[#1a3a8a]/10' },
+  ];
 
   return (
     <div 
@@ -78,20 +134,21 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, language, onClick, onShowToas
           <HighlightText text={post.description} query={highlightQuery} />
         </p>
 
-        <div className="mt-auto pt-4 sm:pt-6 border-t border-gray-50 flex justify-between items-center">
-          <button 
-            onClick={(e) => handleShare('native', e)}
-            className="text-[9px] sm:text-[10px] font-black tracking-widest text-gray-300 uppercase hover:text-[#1a3a8a]"
-          >
-            {t.share}
-          </button>
-          <div className="flex space-x-2 sm:space-x-3">
-            {['facebook', 'twitter', 'whatsapp', 'copy'].map((p) => (
-              <div key={p} onClick={(e) => handleShare(p, e)} className="transform hover:scale-110 active:scale-90 opacity-60 hover:opacity-100 scale-90 sm:scale-100">
-                {p === 'facebook' && <Icons.Facebook />}
-                {p === 'twitter' && <Icons.Twitter />}
-                {p === 'whatsapp' && <Icons.WhatsApp />}
-                {p === 'copy' && <Icons.Link />}
+        <div className="mt-auto pt-6 border-t border-gray-100 flex flex-col gap-4">
+          <div className="flex items-center">
+            <p className="text-[9px] font-black tracking-widest text-gray-400 uppercase">
+              {t.share}
+            </p>
+          </div>
+          <div className="flex items-center gap-0.5 sm:gap-1.5">
+            {platforms.map((p) => (
+              <div 
+                key={p.id} 
+                onClick={(e) => handleShare(p.id, e)} 
+                className={`p-1.5 sm:p-2 rounded-lg bg-gray-50/80 text-gray-500 transform hover:scale-110 active:scale-90 hover:shadow-md transition-all cursor-pointer ${p.hoverColor} ${p.bgColor}`}
+                title={p.id.charAt(0).toUpperCase() + p.id.slice(1)}
+              >
+                {p.icon}
               </div>
             ))}
           </div>

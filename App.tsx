@@ -5,8 +5,11 @@ import { TRANSLATIONS, Icons, getPostImage, POSTS_PER_PAGE } from './constants';
 import BlogCard from './components/BlogCard';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import Logo from './components/Logo';
+import Auth from './components/Auth';
+import Dashboard from './components/Dashboard';
 import { marked } from 'marked';
 
+// Updated URL to point to the correct repository source
 const GITHUB_RAW_URL = "https://raw.githubusercontent.com/logik101/micro-blog/main/public/post.md";
 
 const HighlightText: React.FC<{ text: string; query: string }> = ({ text, query }) => {
@@ -43,7 +46,6 @@ const App: React.FC = () => {
   const [toast, setToast] = useState<string | null>(null);
   
   const searchRef = useRef<HTMLDivElement>(null);
-  const blogContainerRef = useRef<HTMLDivElement>(null);
 
   const t = TRANSLATIONS[language];
 
@@ -92,14 +94,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(true), 10000);
-    const handleFocus = () => fetchData(true);
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-    };
+    const interval = setInterval(() => fetchData(true), 15000);
+    return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Reset to page 1 when search or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortOrder]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -120,10 +122,6 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, sortOrder, language]);
 
   const getLangField = (post: BlogPost, field: 'title' | 'description' | 'content'): string => {
     const key = `${field}_${language}` as keyof BlogPost;
@@ -148,11 +146,9 @@ const App: React.FC = () => {
     const q = searchQuery.toLowerCase();
     return posts.map(p => {
       const title = getLangField(p, 'title');
-      const desc = getLangField(p, 'description');
-      const content = getLangField(p, 'content');
       const author = p.author || 'Admin';
-      if (title.toLowerCase().includes(q) || desc.toLowerCase().includes(q) || content.toLowerCase().includes(q) || author.toLowerCase().includes(q)) {
-        return { post: p, title, author, type: title.toLowerCase().includes(q) ? 'title' : author.toLowerCase().includes(q) ? 'author' : 'content' };
+      if (title.toLowerCase().includes(q) || author.toLowerCase().includes(q)) {
+        return { post: p, title, author };
       }
       return null;
     }).filter(Boolean) as any[];
@@ -173,22 +169,70 @@ const App: React.FC = () => {
     return allFilteredBlogs.slice(start, start + POSTS_PER_PAGE);
   }, [allFilteredBlogs, currentPage]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-6">
-          <div className="w-10 h-10 border-4 border-[#1a3a8a] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleShare = async (post: BlogPost, platform: string) => {
+    const shareUrl = window.location.href;
+    const title = getLangField(post, 'title');
+    const description = getLangField(post, 'description');
+
+    if (platform === 'native' && navigator.share) {
+      try {
+        await navigator.share({ 
+          title: title, 
+          text: description,
+          url: shareUrl 
+        });
+        return;
+      } catch (err) {}
+    }
+
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedTitle = encodeURIComponent(title);
+    const encodedText = encodeURIComponent(`${title} - ${description}`);
+    
+    let url = '';
+    switch (platform) {
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        break;
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`;
+        break;
+      case 'whatsapp':
+        const waUrl = `whatsapp://send?text=${encodedText}%20${encodedUrl}`;
+        const waWebUrl = `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
+        window.location.href = waUrl;
+        setTimeout(() => { if (document.hasFocus()) window.open(waWebUrl, '_blank'); }, 500);
+        return;
+      case 'linkedin':
+        url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+        break;
+      case 'instagram':
+        await navigator.clipboard.writeText(shareUrl);
+        showToast(language === 'fr' ? 'Lien copié ! Ouverture d\'Instagram...' : 'Link copied! Opening Instagram...');
+        window.location.href = 'instagram://';
+        return;
+      case 'tiktok':
+        await navigator.clipboard.writeText(shareUrl);
+        showToast(language === 'fr' ? 'Lien copié ! Ouverture de TikTok...' : 'Link copied! Opening TikTok...');
+        window.location.href = 'snssdk1128://';
+        return;
+      case 'copy':
+      default:
+        await navigator.clipboard.writeText(shareUrl);
+        showToast(language === 'fr' ? 'Lien copié !' : 'Link copied!');
+        return;
+    }
+
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const renderHome = () => (
     <div className="min-h-screen bg-[#f9fafb]">
       <nav className="bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center sticky top-0 z-50">
         <Logo className="cursor-pointer" size="sm" showText={false} />
-        <LanguageSwitcher currentLanguage={language} onLanguageChange={setLanguage} />
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher currentLanguage={language} onLanguageChange={setLanguage} />
+        </div>
       </nav>
 
       <header className="max-w-4xl mx-auto text-center py-12 md:py-24 px-6">
@@ -215,7 +259,7 @@ const App: React.FC = () => {
                   {searchResults.length === 0 ? (
                     <div className="p-6 text-center text-gray-400 font-medium text-sm">{t.noResults}</div>
                   ) : (
-                    searchResults.map(({ post, title, author, type }) => (
+                    searchResults.map(({ post, title, author }) => (
                       <button
                         key={post.id}
                         onClick={() => handleArticleOpen(post.id)}
@@ -256,67 +300,65 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-24" ref={blogContainerRef}>
-        {filteredBlogs.length === 0 ? (
-          <div className="text-center py-16 sm:py-20 bg-white rounded-[2rem] border border-dashed border-gray-200">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-400">{t.noResults}</h3>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10">
-              {filteredBlogs.map(p => (
-                <BlogCard 
-                  key={p.id} 
-                  post={{
-                    ...p,
-                    title: getLangField(p, 'title'),
-                    description: getLangField(p, 'description'),
-                    content: getLangField(p, 'content')
-                  }} 
-                  language={language}
-                  highlightQuery={searchQuery}
-                  onShowToast={showToast}
-                  onClick={() => handleArticleOpen(p.id)}
-                />
-              ))}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10">
+          {filteredBlogs.map(p => (
+            <BlogCard 
+              key={p.id} 
+              post={{
+                ...p,
+                title: getLangField(p, 'title'),
+                description: getLangField(p, 'description'),
+                content: getLangField(p, 'content')
+              }} 
+              language={language}
+              highlightQuery={searchQuery}
+              onShowToast={showToast}
+              onClick={() => handleArticleOpen(p.id)}
+            />
+          ))}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="mt-20 flex justify-center items-center gap-12">
+            <button
+              onClick={() => {
+                setCurrentPage(prev => Math.max(1, prev - 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={currentPage === 1}
+              className={`group flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
+                currentPage === 1 ? 'opacity-20 cursor-not-allowed grayscale' : 'hover:text-[#1a3a8a] text-gray-600'
+              }`}
+            >
+              <span className="text-xl group-hover:-translate-x-1.5 transition-transform duration-300">←</span>
+              {t.prev}
+            </button>
+            
+            <div className="h-10 w-[1px] bg-gray-100 rotate-[30deg]"></div>
+
+            <div className="flex items-center">
+              <span className="text-[10px] font-black text-[#1a3a8a] bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest">
+                {currentPage} / {totalPages}
+              </span>
             </div>
 
-            {totalPages > 1 && (
-              <div className="mt-12 sm:mt-20 flex flex-wrap justify-center items-center gap-3">
-                <button
-                  onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all ${
-                    currentPage === 1 ? 'text-gray-300 border-gray-100' : 'text-[#1a3a8a] border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  {t.prev}
-                </button>
-                <div className="flex gap-1.5 sm:gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl font-black text-xs sm:text-sm transition-all ${
-                        currentPage === page ? 'bg-[#1a3a8a] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50 border border-gray-100'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all ${
-                    currentPage === totalPages ? 'text-gray-300 border-gray-100' : 'text-[#1a3a8a] border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  {t.next}
-                </button>
-              </div>
-            )}
-          </>
+            <div className="h-10 w-[1px] bg-gray-100 rotate-[30deg]"></div>
+
+            <button
+              onClick={() => {
+                setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={currentPage === totalPages}
+              className={`group flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
+                currentPage === totalPages ? 'opacity-20 cursor-not-allowed grayscale' : 'hover:text-[#1a3a8a] text-gray-600'
+              }`}
+            >
+              {t.next}
+              <span className="text-xl group-hover:translate-x-1.5 transition-transform duration-300">→</span>
+            </button>
+          </div>
         )}
       </main>
 
@@ -337,6 +379,20 @@ const App: React.FC = () => {
     if (!post) return null;
     const title = getLangField(post, 'title');
     const content = getLangField(post, 'content');
+
+    const platforms = [
+      { id: 'facebook', icon: <Icons.Facebook />, hoverColor: 'hover:text-[#1877F2]', bgColor: 'hover:bg-[#1877F2]/10' },
+      { id: 'twitter', icon: <Icons.Twitter />, hoverColor: 'hover:text-black', bgColor: 'hover:bg-black/10' },
+      { id: 'linkedin', icon: <Icons.LinkedIn />, hoverColor: 'hover:text-[#0A66C2]', bgColor: 'hover:bg-[#0A66C2]/10' },
+      { id: 'whatsapp', icon: <Icons.WhatsApp />, hoverColor: 'hover:text-[#25D366]', bgColor: 'hover:bg-[#25D366]/10' },
+      { id: 'instagram', icon: <Icons.Instagram />, hoverColor: 'hover:text-[#E4405F]', bgColor: 'hover:bg-[#E4405F]/10' },
+      { id: 'tiktok', icon: <Icons.TikTok />, hoverColor: 'hover:text-black', bgColor: 'hover:bg-black/10' },
+      { id: 'copy', icon: <Icons.Link />, hoverColor: 'hover:text-[#1a3a8a]', bgColor: 'hover:bg-[#1a3a8a]/10' },
+    ];
+
+    const suggestedPosts = posts
+      .filter(p => p.id !== selectedPostId)
+      .slice(0, 3);
     
     return (
       <div className="min-h-screen bg-white">
@@ -354,74 +410,75 @@ const App: React.FC = () => {
         
         <article className="max-w-4xl mx-auto py-8 sm:py-16 px-4 sm:px-6">
           <header className="mb-10 sm:mb-16 text-center">
-            <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-6 sm:mb-8">
-              <span className="bg-blue-50 text-[#1a3a8a] text-[9px] sm:text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">Article</span>
-              <span className="text-gray-400 text-[10px] sm:text-xs font-medium">{post.publicationDate}</span>
-              <span className="text-gray-300 hidden sm:inline">•</span>
-              <span className="text-gray-400 text-[10px] sm:text-xs font-medium">{post.readTimeMinutes} min {t.readTime}</span>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 mb-8 sm:mb-10 leading-[1.15] tracking-tight">
-              {title}
-            </h1>
-
-            <div className="flex justify-center items-center gap-3 sm:gap-4 mb-10 sm:mb-12">
-               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-tr from-[#1a3a8a] to-blue-500 rounded-full flex items-center justify-center text-white font-black text-base sm:text-lg shadow-lg">
-                 {post.author.charAt(0)}
-               </div>
-               <div className="text-left">
-                 <div className="text-xs sm:text-sm font-black text-gray-900">{post.author}</div>
-                 <div className="text-[10px] sm:text-xs text-gray-400 font-medium">Expert Microfinance</div>
-               </div>
-            </div>
-
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 mb-8 leading-[1.15] tracking-tight">{title}</h1>
             <div className="rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 aspect-[16/9]">
               <img src={getPostImage(post)} alt={title} className="w-full h-full object-cover" />
             </div>
           </header>
-
           <div className="max-w-2xl mx-auto">
             <div 
-              className="prose prose-sm sm:prose-lg md:prose-xl prose-blue max-w-none text-gray-700 leading-relaxed font-medium mb-12 sm:mb-20 overflow-x-hidden"
+              className="prose prose-sm sm:prose-lg md:prose-xl prose-blue max-w-none text-gray-700 leading-relaxed font-medium mb-12"
               dangerouslySetInnerHTML={{ __html: marked.parse(content) }}
             />
-
-            <div className="bg-gray-50 rounded-2xl sm:rounded-[2rem] p-6 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 border border-gray-100 mb-12 sm:mb-16">
-               <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#1a3a8a] rounded-xl sm:rounded-2xl flex-shrink-0 flex items-center justify-center text-white font-black text-xl sm:text-2xl">
-                 {post.author.charAt(0)}
-               </div>
-               <div>
-                 <h4 className="text-base sm:text-lg font-black text-gray-900 mb-1 sm:mb-2">{post.author}</h4>
-                 <p className="text-xs sm:text-sm text-gray-500 leading-relaxed font-medium">
-                   Expert en solutions numériques favorisant l'inclusion financière.
-                 </p>
-               </div>
-            </div>
             
-            <button 
-              onClick={() => setView('home')}
-              className="w-full bg-[#111827] text-white py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest hover:bg-black transition-all"
-            >
-              {t.backToPosts}
-            </button>
+            <div className="mt-20 py-12 border-t border-gray-100">
+              <div className="flex flex-col items-center gap-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">{t.share}</p>
+                <div className="flex items-center gap-1 sm:gap-3">
+                  {platforms.map((p) => (
+                    <button 
+                      key={p.id} 
+                      onClick={() => handleShare(post, p.id)} 
+                      className={`p-2 sm:p-3 rounded-2xl bg-gray-50 text-gray-500 transform hover:scale-110 active:scale-90 hover:shadow-xl transition-all ${p.hoverColor} ${p.bgColor}`}
+                      title={p.id.charAt(0).toUpperCase() + p.id.slice(1)}
+                    >
+                      {p.icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {suggestedPosts.length > 0 && (
+              <div className="mt-24 pt-12 border-t border-gray-100">
+                <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-10 text-center uppercase tracking-widest">{t.suggestedPosts}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {suggestedPosts.map(p => {
+                    const sTitle = getLangField(p, 'title');
+                    return (
+                      <div 
+                        key={p.id} 
+                        onClick={() => handleArticleOpen(p.id)}
+                        className="group cursor-pointer flex flex-col"
+                      >
+                        <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 border border-gray-100 shadow-sm transition-shadow group-hover:shadow-md">
+                          <img src={getPostImage(p)} alt={sTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        </div>
+                        <h4 className="text-sm font-black text-gray-900 leading-snug group-hover:text-[#1a3a8a] transition-colors line-clamp-2">{sTitle}</h4>
+                        <div className="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          {p.author}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button onClick={() => setView('home')} className="mt-24 w-full bg-[#111827] text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#1a3a8a] transition-colors">{t.backToPosts}</button>
           </div>
         </article>
       </div>
     );
   };
 
-  /**
-   * Helper function to render the appropriate content based on current view state
-   * Fixes: Cannot find name 'renderContent'.
-   */
   const renderContent = () => {
     switch (view) {
-      case 'home':
-        return renderHome();
-      case 'article':
-        return renderArticle();
-      default:
-        return renderHome();
+      case 'home': return renderHome();
+      case 'article': return renderArticle();
+      case 'login': return <Auth onLogin={() => setView('dashboard')} onBack={() => setView('home')} language={language} />;
+      case 'dashboard': return <Dashboard posts={posts} language={language} onLogout={() => setView('home')} onAdd={(p) => setPosts([p, ...posts])} onDelete={(id) => setPosts(posts.filter(x => x.id !== id))} onEdit={() => {}} onUpdate={(p) => setPosts(posts.map(x => x.id === p.id ? p : x))} onLanguageChange={setLanguage} />;
+      default: return renderHome();
     }
   };
 
@@ -429,7 +486,7 @@ const App: React.FC = () => {
     <>
       {renderContent()}
       {toast && (
-        <div className="fixed bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 w-[90%] sm:w-auto justify-center">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
           {toast}
         </div>
       )}
